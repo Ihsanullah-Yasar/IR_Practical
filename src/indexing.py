@@ -947,8 +947,6 @@ def calculate_idf(
         inverted_index,
     )
 
-    # A term that does not occur in the collection
-    # has no meaningful IDF value for this index.
     if df == 0:
         return 0.0
 
@@ -1128,6 +1126,282 @@ def inverse_document_frequency_demo(
 
 
 # ============================================================
+# PART 9 - TF-IDF
+# ============================================================
+
+def calculate_tfidf(
+    document,
+    inverted_index,
+    total_documents,
+):
+    """
+    Calculate TF-IDF weights for all terms in a document.
+
+    Formula:
+
+        TFIDF(t,d) = TF(t,d) * IDF(t)
+
+    Normalized TF is used:
+
+        TF(t,d) = count(t,d) / total_terms
+
+    Parameters:
+        document:
+            List of processed terms for one document.
+
+        inverted_index:
+            Inverted index used to calculate document frequency.
+
+        total_documents:
+            Total number of documents in the collection.
+
+    Returns:
+        Dictionary mapping each term to its TF-IDF value.
+    """
+
+    normalized_tf = calculate_tf(
+        document,
+        normalized=True,
+    )
+
+    tfidf = {}
+
+    for term, tf in normalized_tf.items():
+
+        idf = calculate_idf(
+            term,
+            inverted_index,
+            total_documents,
+        )
+
+        tfidf[term] = tf * idf
+
+    return tfidf
+
+
+def calculate_all_tfidf(
+    processed_documents,
+    inverted_index,
+):
+    """
+    Calculate TF-IDF weights for every document.
+
+    Returns:
+
+        {
+            document_id: {
+                term: tfidf_value,
+                ...
+            },
+            ...
+        }
+    """
+
+    total_documents = len(
+        processed_documents
+    )
+
+    all_tfidf = {}
+
+    for document_id, document in (
+        processed_documents.items()
+    ):
+
+        all_tfidf[document_id] = (
+            calculate_tfidf(
+                document,
+                inverted_index,
+                total_documents,
+            )
+        )
+
+    return all_tfidf
+
+
+def tfidf_demo(
+    processed_documents,
+    inverted_index,
+    categories,
+):
+    """
+    Demonstrate TF-IDF calculation on documents
+    from different categories.
+    """
+
+    print("\n" + "=" * 60)
+    print("PART 9 - TF-IDF")
+    print("=" * 60)
+
+    total_documents = len(
+        processed_documents
+    )
+
+    all_tfidf = calculate_all_tfidf(
+        processed_documents,
+        inverted_index,
+    )
+
+    # --------------------------------------------------------
+    # Select the first document from three different
+    # categories.
+    # --------------------------------------------------------
+
+    selected_documents = []
+    seen_categories = set()
+
+    for document_id, category in (
+        categories.items()
+    ):
+
+        if category not in seen_categories:
+
+            selected_documents.append(
+                (
+                    document_id,
+                    category,
+                )
+            )
+
+            seen_categories.add(
+                category
+            )
+
+        if len(selected_documents) == 3:
+            break
+
+    # --------------------------------------------------------
+    # Display top TF-IDF terms for each document.
+    # --------------------------------------------------------
+
+    for document_id, category in (
+        selected_documents
+    ):
+
+        document = processed_documents[
+            document_id
+        ]
+
+        tf = calculate_tf(
+            document,
+            normalized=True,
+        )
+
+        tfidf = all_tfidf[
+            document_id
+        ]
+
+        # Sort by:
+        # 1. Highest TF-IDF value
+        # 2. Alphabetical term order for ties
+        top_terms = sorted(
+            tfidf.items(),
+            key=lambda item: (
+                -item[1],
+                item[0],
+            ),
+        )[:10]
+
+        print("\n" + "-" * 60)
+
+        print(
+            f"Document: {document_id}"
+        )
+
+        print(
+            f"Category: {category}"
+        )
+
+        print(
+            f"Total processed terms: "
+            f"{len(document)}"
+        )
+
+        print("-" * 60)
+
+        print(
+            f"{'Term':<20}"
+            f"{'TF':>12}"
+            f"{'IDF':>12}"
+            f"{'TF-IDF':>15}"
+        )
+
+        print("-" * 60)
+
+        for term, tfidf_value in top_terms:
+
+            idf = calculate_idf(
+                term,
+                inverted_index,
+                total_documents,
+            )
+
+            print(
+                f"{term:<20}"
+                f"{tf.get(term, 0.0):>12.6f}"
+                f"{idf:>12.6f}"
+                f"{tfidf_value:>15.6f}"
+            )
+
+    # --------------------------------------------------------
+    # Explicit formula verification using D1/fractal.
+    # --------------------------------------------------------
+
+    if (
+        "D1" in processed_documents
+        and "fractal"
+        in processed_documents["D1"]
+    ):
+
+        d1_tf = calculate_tf(
+            processed_documents["D1"],
+            normalized=True,
+        ).get(
+            "fractal",
+            0.0,
+        )
+
+        fractal_idf = calculate_idf(
+            "fractal",
+            inverted_index,
+            total_documents,
+        )
+
+        fractal_tfidf = all_tfidf[
+            "D1"
+        ].get(
+            "fractal",
+            0.0,
+        )
+
+        print("\n" + "-" * 60)
+        print("TF-IDF FORMULA VERIFICATION")
+        print("-" * 60)
+
+        print(
+            f"TF(fractal, D1) = "
+            f"{d1_tf:.6f}"
+        )
+
+        print(
+            f"IDF(fractal) = "
+            f"{fractal_idf:.6f}"
+        )
+
+        print(
+            "TFIDF(fractal, D1) = "
+            f"{d1_tf:.6f} × "
+            f"{fractal_idf:.6f}"
+        )
+
+        print(
+            f"TFIDF(fractal, D1) = "
+            f"{fractal_tfidf:.6f}"
+        )
+
+    return all_tfidf
+
+
+# ============================================================
 # MAIN PROGRAM
 # ============================================================
 
@@ -1264,4 +1538,14 @@ if __name__ == "__main__":
     inverse_document_frequency_demo(
         inverted_index,
         len(processed_documents),
+    )
+
+    # ========================================================
+    # PART 9 - TF-IDF
+    # ========================================================
+
+    tfidf_weights = tfidf_demo(
+        processed_documents,
+        inverted_index,
+        categories,
     )
