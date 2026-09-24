@@ -1,3 +1,6 @@
+import math
+
+
 class Dictionary:
     """
     Dictionary for the Information Retrieval system.
@@ -11,12 +14,7 @@ class Dictionary:
         self.id_to_term = {}
 
     def add_term(self, term):
-        """
-        Add a term to the dictionary if it does not already exist.
-
-        Returns:
-            int: The term ID.
-        """
+        """Add a term and return its term ID."""
 
         if term not in self.term_to_id:
             term_id = len(self.term_to_id) + 1
@@ -27,46 +25,27 @@ class Dictionary:
         return self.term_to_id[term]
 
     def term_exists(self, term):
-        """
-        Check whether a term exists in the dictionary.
-
-        Returns:
-            bool: True if the term exists, otherwise False.
-        """
+        """Check whether a term exists."""
 
         return term in self.term_to_id
 
     def get_term_id(self, term):
-        """
-        Get the term ID for a given term.
-
-        Returns:
-            int or None: Term ID if the term exists.
-        """
+        """Return the ID of a term."""
 
         return self.term_to_id.get(term)
 
     def get_term(self, term_id):
-        """
-        Get the term associated with a term ID.
-
-        Returns:
-            str or None: Term if the ID exists.
-        """
+        """Return the term associated with a term ID."""
 
         return self.id_to_term.get(term_id)
 
     def vocabulary_size(self):
-        """
-        Return the total number of unique terms.
-        """
+        """Return vocabulary size."""
 
         return len(self.term_to_id)
 
     def terms(self):
-        """
-        Return all terms in dictionary insertion order.
-        """
+        """Return all dictionary terms."""
 
         return self.term_to_id.keys()
 
@@ -78,16 +57,6 @@ class Dictionary:
 def build_dictionary(processed_documents):
     """
     Build a dictionary from all processed documents.
-
-    Args:
-        processed_documents:
-            {
-                "D1": ["term1", "term2", ...],
-                "D2": ["term2", "term3", ...]
-            }
-
-    Returns:
-        Dictionary: The constructed dictionary.
     """
 
     dictionary = Dictionary()
@@ -103,10 +72,6 @@ def build_dictionary(processed_documents):
 def unique_terms_per_document(processed_documents):
     """
     Calculate the number of unique terms in each document.
-
-    Returns:
-        dict:
-            Document ID -> number of unique terms.
     """
 
     unique_terms = {}
@@ -120,7 +85,7 @@ def unique_terms_per_document(processed_documents):
 
 def average_unique_terms_per_document(processed_documents):
     """
-    Calculate the average number of unique terms per document.
+    Calculate average unique terms per document.
     """
 
     if not processed_documents:
@@ -143,9 +108,7 @@ def print_dictionary_statistics(
     dictionary,
     processed_documents,
 ):
-    """
-    Print Part 3 dictionary statistics.
-    """
+    """Print dictionary statistics."""
 
     average_unique_terms = (
         average_unique_terms_per_document(
@@ -174,9 +137,7 @@ def print_dictionary_statistics(
 
 
 def dictionary_demo(dictionary):
-    """
-    Demonstrate basic dictionary operations.
-    """
+    """Demonstrate dictionary operations."""
 
     print("\n" + "=" * 60)
     print("DICTIONARY DEMONSTRATION")
@@ -191,9 +152,7 @@ def dictionary_demo(dictionary):
         if index >= 20:
             break
 
-        term_id = dictionary.get_term_id(
-            term
-        )
+        term_id = dictionary.get_term_id(term)
 
         print(
             f"  {term_id:>4} -> {term}"
@@ -217,9 +176,7 @@ def dictionary_demo(dictionary):
         dictionary.get_term_id(test_term)
     )
 
-    unknown_term = (
-        "thistermdoesnotexist"
-    )
+    unknown_term = "thistermdoesnotexist"
 
     print(
         f"\nDoes '{unknown_term}' exist?"
@@ -240,11 +197,11 @@ def build_inverted_index(processed_documents):
     """
     Build an inverted index.
 
-    The inverted index maps each term to a list
-    of document IDs containing that term.
+    Structure:
 
-    A document appears only once in a posting list,
-    regardless of how many times the term occurs.
+        term -> list of document IDs
+
+    Each document appears only once per term.
     """
 
     inverted_index = {}
@@ -275,10 +232,6 @@ def build_inverted_index(processed_documents):
 def search_term(term, inverted_index):
     """
     Search the inverted index for a term.
-
-    Returns:
-        list:
-            Posting list containing document IDs.
     """
 
     return inverted_index.get(
@@ -292,10 +245,9 @@ def document_frequency(
     inverted_index,
 ):
     """
-    Calculate document frequency (DF).
+    Calculate document frequency.
 
-    DF is the number of documents containing
-    the term.
+    DF(t) = number of documents containing t.
     """
 
     return len(
@@ -335,9 +287,7 @@ def print_inverted_index_statistics(
     dictionary=None,
     processed_documents=None,
 ):
-    """
-    Print inverted-index statistics.
-    """
+    """Print inverted-index statistics."""
 
     print("\n" + "=" * 60)
     print("PART 4 - INVERTED INDEX")
@@ -392,18 +342,11 @@ def print_inverted_index_statistics(
             )
 
 
-def inverted_index_demo(
-    inverted_index,
-):
-    """
-    Demonstrate inverted-index searching
-    and document frequency.
-    """
+def inverted_index_demo(inverted_index):
+    """Demonstrate inverted-index operations."""
 
     print("\n" + "=" * 60)
-    print(
-        "INVERTED INDEX DEMONSTRATION"
-    )
+    print("INVERTED INDEX DEMONSTRATION")
     print("=" * 60)
 
     demonstration_terms = [
@@ -464,9 +407,7 @@ def inverted_index_demo(
         f"{len(postings)}"
     )
 
-    unknown_term = (
-        "thistermdoesnotexist"
-    )
+    unknown_term = "thistermdoesnotexist"
 
     unknown_postings = search_term(
         unknown_term,
@@ -485,21 +426,18 @@ def inverted_index_demo(
 # PART 5 - POSITIONAL INDEX
 # ============================================================
 
-def build_positional_index(
-    processed_documents,
-):
+def build_positional_index(processed_documents):
     """
     Build a positional index.
 
-    The positional index maps:
+    Structure:
 
         term -> document -> positions
 
-    Position numbering starts at 1.
+    Positions start at 1.
 
-    Positions are assigned AFTER preprocessing.
-    Therefore, removed stop words do not occupy
-    positions in the positional index.
+    Positions are assigned after preprocessing,
+    so removed stop words do not occupy positions.
     """
 
     positional_index = {}
@@ -538,15 +476,6 @@ def search_positional_term(
 ):
     """
     Search for a term in the positional index.
-
-    Returns:
-
-        {
-            "D1": [10, 20],
-            "D8": [7, 18]
-        }
-
-    If the term does not exist, returns {}.
     """
 
     return positional_index.get(
@@ -559,9 +488,7 @@ def positional_index_statistics(
     positional_index,
     processed_documents,
 ):
-    """
-    Calculate basic positional-index statistics.
-    """
+    """Print positional-index statistics."""
 
     total_positions = 0
 
@@ -597,17 +524,11 @@ def positional_index_statistics(
     )
 
 
-def positional_index_demo(
-    positional_index,
-):
-    """
-    Demonstrate positional-index operations.
-    """
+def positional_index_demo(positional_index):
+    """Demonstrate positional-index operations."""
 
     print("\n" + "=" * 60)
-    print(
-        "POSITIONAL INDEX DEMONSTRATION"
-    )
+    print("POSITIONAL INDEX DEMONSTRATION")
     print("=" * 60)
 
     demonstration_terms = [
@@ -647,9 +568,7 @@ def positional_index_demo(
                 f"{positions}"
             )
 
-    unknown_term = (
-        "thistermdoesnotexist"
-    )
+    unknown_term = "thistermdoesnotexist"
 
     print(
         f"\nUnknown term "
@@ -674,30 +593,14 @@ def phrase_search(
 ):
     """
     Search for an exact phrase using the positional index.
-
-    The phrase is processed using the same preprocessing
-    pipeline used for documents.
-
-    Stop words removed during preprocessing do not occupy
-    positions.
     """
 
     from src.preprocessing import preprocess
-
-    # --------------------------------------------------------
-    # Step 1:
-    # Preprocess the phrase.
-    # --------------------------------------------------------
 
     phrase_terms = preprocess(phrase)
 
     if not phrase_terms:
         return []
-
-    # --------------------------------------------------------
-    # Step 2:
-    # Single-term phrase.
-    # --------------------------------------------------------
 
     if len(phrase_terms) == 1:
 
@@ -710,11 +613,6 @@ def phrase_search(
             ).keys()
         )
 
-    # --------------------------------------------------------
-    # Step 3:
-    # Find documents containing the first term.
-    # --------------------------------------------------------
-
     first_term = phrase_terms[0]
 
     first_term_documents = (
@@ -726,11 +624,6 @@ def phrase_search(
 
     if not first_term_documents:
         return []
-
-    # --------------------------------------------------------
-    # Step 4:
-    # Check consecutive positions.
-    # --------------------------------------------------------
 
     matching_documents = []
 
@@ -785,12 +678,8 @@ def phrase_search(
     return matching_documents
 
 
-def phrase_search_demo(
-    positional_index,
-):
-    """
-    Demonstrate phrase searching.
-    """
+def phrase_search_demo(positional_index):
+    """Demonstrate phrase searching."""
 
     print("\n" + "=" * 60)
     print("PART 6 - PHRASE QUERIES")
@@ -828,9 +717,7 @@ def phrase_search_demo(
 
         print(results[:10])
 
-    unknown_phrase = (
-        "thistermdoesnotexist"
-    )
+    unknown_phrase = "thistermdoesnotexist"
 
     unknown_results = phrase_search(
         unknown_phrase,
@@ -857,27 +744,13 @@ def calculate_tf(
     normalized=False,
 ):
     """
-    Calculate term frequency for a document.
+    Calculate term frequency.
 
     Raw TF:
-        TF(t, d) = count of term t in document d
+        TF(t,d) = count of term t in document d
 
     Normalized TF:
-        TF(t, d) =
-            count of term t /
-            total number of terms in document d
-
-    Args:
-        document:
-            List of processed terms.
-
-        normalized:
-            If False, return raw term frequencies.
-            If True, return normalized term frequencies.
-
-    Returns:
-        dict:
-            term -> TF value
+        TF(t,d) = count / total terms
     """
 
     term_counts = {}
@@ -912,10 +785,7 @@ def print_tf_table(
     document,
     terms,
 ):
-    """
-    Print raw and normalized TF values for
-    selected terms in a document.
-    """
+    """Print raw and normalized TF values."""
 
     raw_tf = calculate_tf(
         document,
@@ -974,19 +844,11 @@ def print_tf_table(
 def term_frequency_demo(
     processed_documents,
 ):
-    """
-    Demonstrate raw and normalized term frequency
-    using real processed documents.
-    """
+    """Demonstrate raw and normalized TF."""
 
     print("\n" + "=" * 60)
     print("PART 7 - TERM FREQUENCY")
     print("=" * 60)
-
-    # --------------------------------------------------------
-    # Demonstration 1:
-    # Use D1 and inspect selected terms.
-    # --------------------------------------------------------
 
     document_id = "D1"
 
@@ -1012,14 +874,6 @@ def term_frequency_demo(
         demonstration_terms,
     )
 
-    # --------------------------------------------------------
-    # Demonstration 2:
-    # Verify that normalized TF values sum to 1.
-    #
-    # Because normalized TF is count / total terms,
-    # the values of all unique terms should sum to 1.
-    # --------------------------------------------------------
-
     normalized_tf = calculate_tf(
         document,
         normalized=True,
@@ -1034,11 +888,6 @@ def term_frequency_demo(
         f"for {document_id}: "
         f"{normalized_tf_sum:.6f}"
     )
-
-    # --------------------------------------------------------
-    # Demonstration 3:
-    # Empty document.
-    # --------------------------------------------------------
 
     empty_document = []
 
@@ -1061,6 +910,220 @@ def term_frequency_demo(
             empty_document,
             normalized=True,
         )
+    )
+
+
+# ============================================================
+# PART 8 - INVERSE DOCUMENT FREQUENCY
+# ============================================================
+
+def calculate_idf(
+    term,
+    inverted_index,
+    total_documents,
+):
+    """
+    Calculate Inverse Document Frequency (IDF).
+
+    Formula:
+
+        IDF(t) = log(N / df(t))
+
+    Where:
+
+        N    = total number of documents
+        df(t) = number of documents containing term t
+
+    Natural logarithm is used through math.log().
+    """
+
+    if total_documents <= 0:
+        raise ValueError(
+            "total_documents must be greater than 0."
+        )
+
+    df = document_frequency(
+        term,
+        inverted_index,
+    )
+
+    # A term that does not occur in the collection
+    # has no meaningful IDF value for this index.
+    if df == 0:
+        return 0.0
+
+    return math.log(
+        total_documents / df
+    )
+
+
+def idf_table(
+    terms,
+    inverted_index,
+    total_documents,
+):
+    """
+    Create a table containing:
+
+        term -> DF -> IDF
+    """
+
+    table = []
+
+    for term in terms:
+
+        df = document_frequency(
+            term,
+            inverted_index,
+        )
+
+        idf = calculate_idf(
+            term,
+            inverted_index,
+            total_documents,
+        )
+
+        table.append(
+            (term, df, idf)
+        )
+
+    return table
+
+
+def print_idf_table(
+    terms,
+    inverted_index,
+    total_documents,
+):
+    """
+    Print a document-frequency and IDF table.
+    """
+
+    table = idf_table(
+        terms,
+        inverted_index,
+        total_documents,
+    )
+
+    print(
+        "\nIDF TABLE"
+    )
+
+    print("-" * 60)
+
+    print(
+        f"{'Term':<20}"
+        f"{'DF':>10}"
+        f"{'IDF':>20}"
+    )
+
+    print("-" * 60)
+
+    for term, df, idf in table:
+
+        print(
+            f"{term:<20}"
+            f"{df:>10}"
+            f"{idf:>20.6f}"
+        )
+
+    print("-" * 60)
+
+
+def inverse_document_frequency_demo(
+    inverted_index,
+    total_documents,
+):
+    """
+    Demonstrate IDF calculation for several terms.
+
+    The terms are selected to demonstrate different
+    document frequencies.
+    """
+
+    print("\n" + "=" * 60)
+    print("PART 8 - INVERSE DOCUMENT FREQUENCY")
+    print("=" * 60)
+
+    print(
+        f"\nTotal number of documents (N): "
+        f"{total_documents}"
+    )
+
+    demonstration_terms = [
+        "fractal",
+        "space",
+        "game",
+        "comput",
+    ]
+
+    print_idf_table(
+        demonstration_terms,
+        inverted_index,
+        total_documents,
+    )
+
+    # --------------------------------------------------------
+    # Manual formula verification for one term.
+    # --------------------------------------------------------
+
+    term = "fractal"
+
+    df = document_frequency(
+        term,
+        inverted_index,
+    )
+
+    idf = calculate_idf(
+        term,
+        inverted_index,
+        total_documents,
+    )
+
+    print(
+        f"\nFormula verification for '{term}':"
+    )
+
+    print(
+        f"IDF({term}) = "
+        f"log({total_documents} / {df})"
+    )
+
+    print(
+        f"IDF({term}) = "
+        f"{idf:.6f}"
+    )
+
+    # --------------------------------------------------------
+    # Unknown-term behavior.
+    # --------------------------------------------------------
+
+    unknown_term = (
+        "thistermdoesnotexist"
+    )
+
+    unknown_df = document_frequency(
+        unknown_term,
+        inverted_index,
+    )
+
+    unknown_idf = calculate_idf(
+        unknown_term,
+        inverted_index,
+        total_documents,
+    )
+
+    print(
+        f"\nUnknown term: "
+        f"'{unknown_term}'"
+    )
+
+    print(
+        f"DF = {unknown_df}"
+    )
+
+    print(
+        f"IDF = {unknown_idf:.6f}"
     )
 
 
@@ -1192,4 +1255,13 @@ if __name__ == "__main__":
 
     term_frequency_demo(
         processed_documents
+    )
+
+    # ========================================================
+    # PART 8 - INVERSE DOCUMENT FREQUENCY
+    # ========================================================
+
+    inverse_document_frequency_demo(
+        inverted_index,
+        len(processed_documents),
     )
