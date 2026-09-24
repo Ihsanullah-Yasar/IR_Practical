@@ -17,6 +17,7 @@ class Dictionary:
         Returns:
             int: The term ID.
         """
+
         if term not in self.term_to_id:
             term_id = len(self.term_to_id) + 1
 
@@ -32,6 +33,7 @@ class Dictionary:
         Returns:
             bool: True if the term exists, otherwise False.
         """
+
         return term in self.term_to_id
 
     def get_term_id(self, term):
@@ -41,6 +43,7 @@ class Dictionary:
         Returns:
             int or None: Term ID if the term exists.
         """
+
         return self.term_to_id.get(term)
 
     def get_term(self, term_id):
@@ -50,18 +53,21 @@ class Dictionary:
         Returns:
             str or None: Term if the ID exists.
         """
+
         return self.id_to_term.get(term_id)
 
     def vocabulary_size(self):
         """
         Return the total number of unique terms.
         """
+
         return len(self.term_to_id)
 
     def terms(self):
         """
         Return all terms in dictionary insertion order.
         """
+
         return self.term_to_id.keys()
 
 
@@ -526,7 +532,6 @@ def build_positional_index(
         ):
 
             if term not in positional_index:
-
                 positional_index[term] = {}
 
             if (
@@ -680,7 +685,221 @@ def positional_index_demo(
 
 
 # ============================================================
-# PART 5 TEST / DEMONSTRATION
+# PART 6 - PHRASE QUERIES
+# ============================================================
+
+def phrase_search(
+    phrase,
+    positional_index,
+):
+    """
+    Search for an exact phrase using the positional index.
+
+    The phrase is processed using the same preprocessing
+    pipeline used for documents.
+
+    Example:
+
+        phrase_search(
+            "information retrieval",
+            positional_index
+        )
+
+    returns the document IDs where the processed terms
+    occur in consecutive positions.
+
+    Stop words removed during preprocessing do not occupy
+    positions.
+    """
+
+    from src.preprocessing import preprocess
+
+    # --------------------------------------------------------
+    # Step 1:
+    # Preprocess the phrase using the same pipeline
+    # used for documents.
+    # --------------------------------------------------------
+
+    phrase_terms = preprocess(phrase)
+
+    # If preprocessing removes everything, there is no
+    # meaningful phrase to search.
+    if not phrase_terms:
+        return []
+
+    # --------------------------------------------------------
+    # Step 2:
+    # A single-term phrase is equivalent to a normal
+    # positional term search.
+    # --------------------------------------------------------
+
+    if len(phrase_terms) == 1:
+
+        term = phrase_terms[0]
+
+        return list(
+            search_positional_term(
+                term,
+                positional_index,
+            ).keys()
+        )
+
+    # --------------------------------------------------------
+    # Step 3:
+    # Get documents containing the first phrase term.
+    # --------------------------------------------------------
+
+    first_term = phrase_terms[0]
+
+    first_term_documents = (
+        search_positional_term(
+            first_term,
+            positional_index,
+        )
+    )
+
+    if not first_term_documents:
+        return []
+
+    # --------------------------------------------------------
+    # Step 4:
+    # Check whether all remaining terms occur at
+    # consecutive positions.
+    # --------------------------------------------------------
+
+    matching_documents = []
+
+    for document_id, start_positions in (
+        first_term_documents.items()
+    ):
+
+        for start_position in start_positions:
+
+            current_position = start_position
+            phrase_matches = True
+
+            # Check every term after the first term.
+            for term in phrase_terms[1:]:
+
+                term_documents = (
+                    search_positional_term(
+                        term,
+                        positional_index,
+                    )
+                )
+
+                # The current document does not contain
+                # the required term.
+                if document_id not in term_documents:
+
+                    phrase_matches = False
+                    break
+
+                expected_position = (
+                    current_position + 1
+                )
+
+                term_positions = (
+                    term_documents[
+                        document_id
+                    ]
+                )
+
+                # The next term must occur exactly at
+                # the next position.
+                if expected_position not in term_positions:
+
+                    phrase_matches = False
+                    break
+
+                current_position = expected_position
+
+            # All terms occurred consecutively.
+            if phrase_matches:
+
+                matching_documents.append(
+                    document_id
+                )
+
+                # No need to check other starting
+                # positions for this document.
+                break
+
+    return matching_documents
+
+
+def phrase_search_demo(
+    positional_index,
+):
+    """
+    Demonstrate phrase searching.
+
+    The example phrases are related to the selected
+    20 Newsgroups categories.
+    """
+
+    print("\n" + "=" * 60)
+    print("PART 6 - PHRASE QUERIES")
+    print("=" * 60)
+
+    example_phrases = [
+        "information retrieval",
+        "space exploration",
+        "medical information",
+        "baseball game",
+        "computer graphics",
+    ]
+
+    print(
+        "\nPHRASE SEARCH RESULTS"
+    )
+
+    print("-" * 60)
+
+    for phrase in example_phrases:
+
+        results = phrase_search(
+            phrase,
+            positional_index,
+        )
+
+        print(
+            f"\nPhrase: '{phrase}'"
+        )
+
+        print(
+            f"Matching documents: "
+            f"{len(results)}"
+        )
+
+        print(results[:10])
+
+    # --------------------------------------------------------
+    # Unknown phrase demonstration.
+    # --------------------------------------------------------
+
+    unknown_phrase = (
+        "thistermdoesnotexist"
+    )
+
+    unknown_results = phrase_search(
+        unknown_phrase,
+        positional_index,
+    )
+
+    print(
+        f"\nUnknown phrase: "
+        f"'{unknown_phrase}'"
+    )
+
+    print(
+        f"Matching documents: "
+        f"{unknown_results}"
+    )
+
+
+# ============================================================
+# MAIN PROGRAM
 # ============================================================
 
 if __name__ == "__main__":
@@ -690,6 +909,12 @@ if __name__ == "__main__":
 
     # --------------------------------------------------------
     # Add project root to Python path.
+    #
+    # This allows:
+    #
+    #     python src/indexing.py
+    #
+    # to work correctly.
     # --------------------------------------------------------
 
     project_root = os.path.dirname(
@@ -737,9 +962,9 @@ if __name__ == "__main__":
         )
     )
 
-    # --------------------------------------------------------
-    # PART 3 - Dictionary.
-    # --------------------------------------------------------
+    # ========================================================
+    # PART 3 - DICTIONARY
+    # ========================================================
 
     dictionary = build_dictionary(
         processed_documents
@@ -754,9 +979,9 @@ if __name__ == "__main__":
         dictionary
     )
 
-    # --------------------------------------------------------
-    # PART 4 - Inverted Index.
-    # --------------------------------------------------------
+    # ========================================================
+    # PART 4 - INVERTED INDEX
+    # ========================================================
 
     inverted_index = (
         build_inverted_index(
@@ -774,9 +999,9 @@ if __name__ == "__main__":
         inverted_index
     )
 
-    # --------------------------------------------------------
-    # PART 5 - Positional Index.
-    # --------------------------------------------------------
+    # ========================================================
+    # PART 5 - POSITIONAL INDEX
+    # ========================================================
 
     positional_index = (
         build_positional_index(
@@ -790,5 +1015,13 @@ if __name__ == "__main__":
     )
 
     positional_index_demo(
+        positional_index
+    )
+
+    # ========================================================
+    # PART 6 - PHRASE QUERIES
+    # ========================================================
+
+    phrase_search_demo(
         positional_index
     )
