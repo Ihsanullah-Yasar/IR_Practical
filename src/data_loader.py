@@ -1,3 +1,5 @@
+from collections import Counter
+
 from sklearn.datasets import fetch_20newsgroups
 
 
@@ -10,96 +12,118 @@ CATEGORIES = [
 ]
 
 
-def load_documents(
-    categories=CATEGORIES,
-    documents_per_category=30,
-    random_state=42
-):
+def load_documents(documents_per_category=30):
+
     dataset = fetch_20newsgroups(
         subset="train",
-        categories=categories,
-        remove=("headers", "footers", "quotes"),
-        shuffle=True,
-        random_state=random_state,
+        categories=CATEGORIES,
+        remove=(),
+        shuffle=False,
+        random_state=42,
     )
 
     documents = {}
-    category_map = {}
+    categories = {}
 
-    counts = {
-        category: 0
-        for category in categories
-    }
+    document_id = 1
 
-    for text, target in zip(
-        dataset.data,
-        dataset.target
-    ):
-        category = dataset.target_names[target]
+    for category_index, category in enumerate(dataset.target_names):
 
-        if counts[category] >= documents_per_category:
-            continue
-        
-        # Skip documents that became empty after
-        # removing headers, footers, and quotes.
-        if not text.strip():
-            continue
+        category_documents = [
+            index
+            for index, target in enumerate(dataset.target)
+            if target == category_index
+        ]
 
-        document_id = f"D{len(documents) + 1}"
+        selected_indices = category_documents[
+            :documents_per_category
+        ]
 
-        documents[document_id] = text
-        category_map[document_id] = category
+        for index in selected_indices:
+            doc_id = f"D{document_id}"
 
-        counts[category] += 1
+            documents[doc_id] = dataset.data[index]
+            categories[doc_id] = category
 
-        if all(
-            count == documents_per_category
-            for count in counts.values()
-        ):
-            break
+            document_id += 1
 
-    return documents, category_map
+    return documents, categories
+
+
+def document_length(text):
+    return len(text.split())
 
 
 def dataset_statistics(documents, categories):
+
     lengths = [
-        len(text.split())
+        document_length(text)
         for text in documents.values()
     ]
 
+    category_counts = Counter(categories.values())
+
+    if lengths:
+        average_length = sum(lengths) / len(lengths)
+        shortest_length = min(lengths)
+        longest_length = max(lengths)
+    else:
+        average_length = 0
+        shortest_length = 0
+        longest_length = 0
+
     return {
         "number_of_documents": len(documents),
-
-        "number_of_categories": len(
-            set(categories.values())
-        ),
-
-        "average_document_length": (
-            sum(lengths) / len(lengths)
-            if lengths
-            else 0
-        ),
-
-        "shortest_document": (
-            min(lengths)
-            if lengths
-            else 0
-        ),
-
-        "longest_document": (
-            max(lengths)
-            if lengths
-            else 0
-        ),
-
-        "documents_per_category": {
-            category: sum(
-                1
-                for c in categories.values()
-                if c == category
-            )
-            for category in sorted(
-                set(categories.values())
-            )
-        },
+        "number_of_categories": len(category_counts),
+        "average_document_length": average_length,
+        "shortest_document": shortest_length,
+        "longest_document": longest_length,
+        "documents_per_category": dict(category_counts),
     }
+
+
+if __name__ == "__main__":
+    documents, categories = load_documents(
+        documents_per_category=30
+    )
+
+    statistics = dataset_statistics(
+        documents,
+        categories,
+    )
+
+    print("=" * 60)
+    print("DATASET INFORMATION")
+    print("=" * 60)
+
+    print(
+        f"Number of documents: "
+        f"{statistics['number_of_documents']}"
+    )
+
+    print(
+        f"Number of categories: "
+        f"{statistics['number_of_categories']}"
+    )
+
+    print(
+        f"Average document length: "
+        f"{statistics['average_document_length']:.2f}"
+    )
+
+    print(
+        f"Shortest document: "
+        f"{statistics['shortest_document']}"
+    )
+
+    print(
+        f"Longest document: "
+        f"{statistics['longest_document']}"
+    )
+
+    print("\nDocuments per category:")
+
+    for category, count in (
+        statistics["documents_per_category"].items()
+    ):
+        print(f"  {category}: {count}")
