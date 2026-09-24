@@ -1,15 +1,17 @@
 """
-Retrieval and query representation functionality
-for the Information Retrieval practical assignment.
+Retrieval functionality for the Information Retrieval
+practical assignment.
 
 Part 10:
     Query Representation
 
 Part 11:
     Vector Creation and Cosine Similarity
+
+Part 12:
+    Ranked Search
 """
 
-import math
 import os
 import sys
 
@@ -42,6 +44,7 @@ from src.preprocessing import preprocess
 from src.indexing import (
     calculate_tf,
     calculate_idf,
+    calculate_tfidf,
 )
 
 
@@ -94,10 +97,6 @@ def calculate_query_tfidf(
 
         TFIDF(t,q) = TF(t,q) * IDF(t)
 
-    Normalized TF is used:
-
-        TF(t,q) = count(t,q) / total query terms
-
     Parameters:
         query_terms:
             Preprocessed query terms.
@@ -109,7 +108,7 @@ def calculate_query_tfidf(
             Total number of documents.
 
     Returns:
-        Dictionary mapping query terms to TF-IDF values.
+        Dictionary mapping terms to TF-IDF values.
     """
 
     if total_documents <= 0:
@@ -189,8 +188,8 @@ def create_vector(
     """
     Convert a sparse TF-IDF dictionary into a dense NumPy vector.
 
-    The vector position is determined by the term ID
-    stored in the Dictionary object.
+    The vector position is determined by the term ID stored
+    in the Dictionary object.
 
     Parameters:
         tfidf_values:
@@ -216,8 +215,8 @@ def create_vector(
                 term
             )
 
-            # Term IDs start from 1, while NumPy
-            # array positions start from 0.
+            # Term IDs start at 1.
+            # NumPy positions start at 0.
             vector[term_id - 1] = weight
 
     return vector
@@ -239,13 +238,6 @@ def cosine_similarity(
         cosine(A, B) =
             (A . B) / (||A|| * ||B||)
 
-    Parameters:
-        query_vector:
-            NumPy vector representing the query.
-
-        document_vector:
-            NumPy vector representing a document.
-
     Returns:
         Cosine similarity as a float.
     """
@@ -261,6 +253,7 @@ def cosine_similarity(
     )
 
     if query_vector.shape != document_vector.shape:
+
         raise ValueError(
             "Query vector and document vector "
             "must have the same dimensions."
@@ -296,65 +289,134 @@ def cosine_similarity(
 
 
 # ============================================================
-# PART 11 - VECTOR AND COSINE DEMONSTRATION
+# PART 12 - BUILD DOCUMENT VECTORS
 # ============================================================
 
-def vector_and_cosine_demo(
+def build_document_vectors(
     processed_documents,
     inverted_index,
     dictionary,
 ):
     """
-    Demonstrate:
+    Build TF-IDF vectors for all documents.
 
-        1. Query TF-IDF
-        2. Document TF-IDF
-        3. Vector creation
-        4. Dot product
-        5. Vector magnitudes
-        6. Cosine similarity
+    The vectors are calculated once and can then be reused
+    for multiple queries.
 
-    This performs a manual test before implementing
-    the complete ranked search in Part 12.
+    Returns:
+
+        {
+            "D1": numpy_vector,
+            "D2": numpy_vector,
+            ...
+        }
     """
-
-    print("\n" + "=" * 60)
-    print(
-        "PART 11 - VECTOR CREATION "
-        "AND COSINE SIMILARITY"
-    )
-    print("=" * 60)
 
     total_documents = len(
         processed_documents
     )
 
-    # --------------------------------------------------------
-    # Test query
-    # --------------------------------------------------------
+    document_vectors = {}
 
-    query = "fractal"
+    for document_id, document in (
+        processed_documents.items()
+    ):
 
-    print(
-        f"\nTest query: '{query}'"
-    )
+        document_tfidf = calculate_tfidf(
+            document,
+            inverted_index,
+            total_documents,
+        )
+
+        document_vectors[document_id] = (
+            create_vector(
+                document_tfidf,
+                dictionary,
+            )
+        )
+
+    return document_vectors
+
+
+# ============================================================
+# PART 12 - RANKED SEARCH
+# ============================================================
+
+def search(
+    query,
+    document_vectors,
+    dictionary,
+    inverted_index,
+    categories,
+    k=10,
+):
+    """
+    Search the document collection and return the
+    top-k documents ranked by cosine similarity.
+
+    Parameters:
+        query:
+            Raw user query.
+
+        document_vectors:
+            Precomputed document TF-IDF vectors.
+
+        dictionary:
+            Term dictionary.
+
+        inverted_index:
+            Collection inverted index.
+
+        categories:
+            Mapping of document IDs to categories.
+
+        k:
+            Number of results to return.
+
+    Returns:
+        List of result dictionaries:
+
+        [
+            {
+                "rank": 1,
+                "document_id": "D1",
+                "score": 0.123456,
+                "category": "comp.graphics"
+            },
+            ...
+        ]
+    """
+
+    if not isinstance(query, str):
+        raise TypeError(
+            "query must be a string."
+        )
+
+    if k <= 0:
+        raise ValueError(
+            "k must be greater than 0."
+        )
+
+    # --------------------------------------------------------
+    # Process query
+    # --------------------------------------------------------
 
     query_terms = process_query(
         query
     )
 
-    print(
-        f"Processed query: {query_terms}"
-    )
+    # Empty query produces no results.
+    if not query_terms:
+        return []
+
+    # --------------------------------------------------------
+    # Query TF-IDF
+    # --------------------------------------------------------
 
     query_tfidf = calculate_query_tfidf(
         query_terms,
         inverted_index,
-        total_documents,
-    )
-
-    print(
-        f"Query TF-IDF: {query_tfidf}"
+        len(document_vectors),
     )
 
     # --------------------------------------------------------
@@ -366,207 +428,237 @@ def vector_and_cosine_demo(
         dictionary,
     )
 
-    print(
-        f"\nQuery vector dimension: "
-        f"{len(query_vector)}"
-    )
-
-    print(
-        f"Query vector non-zero values: "
-        f"{np.count_nonzero(query_vector)}"
-    )
-
     # --------------------------------------------------------
-    # Select a document containing the query term
+    # If the query contains only unknown terms,
+    # its vector will be all zeros.
     # --------------------------------------------------------
 
-    candidate_documents = (
-        inverted_index.get(
-            "fractal",
-            [],
+    if np.linalg.norm(query_vector) == 0.0:
+        return []
+
+    # --------------------------------------------------------
+    # Calculate similarity with every document
+    # --------------------------------------------------------
+
+    scored_documents = []
+
+    for document_id, document_vector in (
+        document_vectors.items()
+    ):
+
+        score = cosine_similarity(
+            query_vector,
+            document_vector,
+        )
+
+        # Only retain documents that have
+        # a meaningful similarity with the query.
+        if score > 0.0:
+
+            scored_documents.append(
+                {
+                    "document_id": document_id,
+                    "score": score,
+                    "category": categories.get(
+                        document_id,
+                        "unknown",
+                    ),
+                }
+            )
+
+    # --------------------------------------------------------
+    # Sort by similarity score
+    # --------------------------------------------------------
+
+    scored_documents.sort(
+        key=lambda result: (
+            -result["score"],
+            result["document_id"],
         )
     )
 
-    if not candidate_documents:
+    # --------------------------------------------------------
+    # Return top-k results
+    # --------------------------------------------------------
+
+    top_results = scored_documents[:k]
+
+    for rank, result in enumerate(
+        top_results,
+        start=1,
+    ):
+        result["rank"] = rank
+
+    return top_results
+
+
+# ============================================================
+# PART 12 - SEARCH RESULT DISPLAY
+# ============================================================
+
+def print_search_results(
+    query,
+    results,
+):
+    """
+    Print ranked search results.
+    """
+
+    print("\n" + "=" * 70)
+
+    print(
+        f"SEARCH QUERY: '{query}'"
+    )
+
+    print("=" * 70)
+
+    if not results:
+
         print(
-            "\nNo document contains "
-            "the test query term."
+            "No results found."
         )
 
         return
 
-    document_id = candidate_documents[0]
-
     print(
-        f"\nSelected document: "
-        f"{document_id}"
+        f"{'Rank':<8}"
+        f"{'Document':<12}"
+        f"{'Score':<15}"
+        f"Category"
     )
 
-    # --------------------------------------------------------
-    # Create document TF-IDF
-    # --------------------------------------------------------
+    print("-" * 70)
 
-    from src.indexing import (
-        calculate_tfidf,
-    )
-
-    document_tfidf = calculate_tfidf(
-        processed_documents[document_id],
-        inverted_index,
-        total_documents,
-    )
-
-    print(
-        f"Document TF-IDF terms: "
-        f"{len(document_tfidf)}"
-    )
-
-    # --------------------------------------------------------
-    # Create document vector
-    # --------------------------------------------------------
-
-    document_vector = create_vector(
-        document_tfidf,
-        dictionary,
-    )
-
-    print(
-        f"Document vector dimension: "
-        f"{len(document_vector)}"
-    )
-
-    print(
-        f"Document vector non-zero values: "
-        f"{np.count_nonzero(document_vector)}"
-    )
-
-    # --------------------------------------------------------
-    # Dot product
-    # --------------------------------------------------------
-
-    dot_product = np.dot(
-        query_vector,
-        document_vector,
-    )
-
-    print(
-        f"\nDot product: "
-        f"{dot_product:.6f}"
-    )
-
-    # --------------------------------------------------------
-    # Magnitudes
-    # --------------------------------------------------------
-
-    query_magnitude = np.linalg.norm(
-        query_vector
-    )
-
-    document_magnitude = np.linalg.norm(
-        document_vector
-    )
-
-    print(
-        f"Query vector magnitude: "
-        f"{query_magnitude:.6f}"
-    )
-
-    print(
-        f"Document vector magnitude: "
-        f"{document_magnitude:.6f}"
-    )
-
-    # --------------------------------------------------------
-    # Cosine similarity
-    # --------------------------------------------------------
-
-    similarity = cosine_similarity(
-        query_vector,
-        document_vector,
-    )
-
-    print(
-        f"\nCosine similarity:"
-        f" {similarity:.6f}"
-    )
-
-    # --------------------------------------------------------
-    # Manual formula verification
-    # --------------------------------------------------------
-
-    manual_similarity = (
-        dot_product
-        / (
-            query_magnitude
-            * document_magnitude
-        )
-    )
-
-    print(
-        "\nCOSINE FORMULA VERIFICATION"
-    )
-
-    print("-" * 60)
-
-    print(
-        "cosine(query, document) = "
-        "(query · document) / "
-        "(||query|| × ||document||)"
-    )
-
-    print(
-        f"\n= {dot_product:.6f} / "
-        f"({query_magnitude:.6f} × "
-        f"{document_magnitude:.6f})"
-    )
-
-    print(
-        f"= {manual_similarity:.6f}"
-    )
-
-    # --------------------------------------------------------
-    # Zero-vector test
-    # --------------------------------------------------------
-
-    zero_vector = np.zeros(
-        dictionary.vocabulary_size()
-    )
-
-    zero_similarity = cosine_similarity(
-        query_vector,
-        zero_vector,
-    )
-
-    print(
-        "\nZero-vector similarity test:"
-    )
-
-    print(
-        f"cosine(query, zero) = "
-        f"{zero_similarity:.6f}"
-    )
-
-    # --------------------------------------------------------
-    # Dimension mismatch test
-    # --------------------------------------------------------
-
-    print(
-        "\nDimension mismatch test:"
-    )
-
-    try:
-
-        cosine_similarity(
-            np.array([1.0, 2.0]),
-            np.array([1.0, 2.0, 3.0]),
-        )
-
-    except ValueError as error:
+    for result in results:
 
         print(
-            f"Correctly raised ValueError: "
-            f"{error}"
+            f"{result['rank']:<8}"
+            f"{result['document_id']:<12}"
+            f"{result['score']:<15.6f}"
+            f"{result['category']}"
         )
+
+
+# ============================================================
+# PART 12 - RANKED SEARCH DEMONSTRATION
+# ============================================================
+
+def ranked_search_demo(
+    processed_documents,
+    inverted_index,
+    dictionary,
+    categories,
+):
+    """
+    Demonstrate ranked retrieval using several queries.
+    """
+
+    print("\n" + "=" * 70)
+    print(
+        "PART 12 - RANKED SEARCH"
+    )
+    print("=" * 70)
+
+    # --------------------------------------------------------
+    # Build document vectors once.
+    # --------------------------------------------------------
+
+    print(
+        "\nBuilding TF-IDF vectors for "
+        f"{len(processed_documents)} documents..."
+    )
+
+    document_vectors = (
+        build_document_vectors(
+            processed_documents,
+            inverted_index,
+            dictionary,
+        )
+    )
+
+    print(
+        f"Document vectors created: "
+        f"{len(document_vectors)}"
+    )
+
+    print(
+        f"Vector dimension: "
+        f"{dictionary.vocabulary_size()}"
+    )
+
+    # --------------------------------------------------------
+    # Test queries
+    # --------------------------------------------------------
+
+    test_queries = [
+        "fractal",
+        "space orbit",
+        "computer graphics",
+        "baseball game",
+        "medical information",
+    ]
+
+    for query in test_queries:
+
+        results = search(
+            query,
+            document_vectors,
+            dictionary,
+            inverted_index,
+            categories,
+            k=5,
+        )
+
+        print_search_results(
+            query,
+            results,
+        )
+
+    # --------------------------------------------------------
+    # Empty query
+    # --------------------------------------------------------
+
+    empty_results = search(
+        "",
+        document_vectors,
+        dictionary,
+        inverted_index,
+        categories,
+        k=5,
+    )
+
+    print(
+        "\nEmpty query results:"
+    )
+
+    print(
+        empty_results
+    )
+
+    # --------------------------------------------------------
+    # Unknown query
+    # --------------------------------------------------------
+
+    unknown_query = (
+        "thistermdoesnotexist"
+    )
+
+    unknown_results = search(
+        unknown_query,
+        document_vectors,
+        dictionary,
+        inverted_index,
+        categories,
+        k=5,
+    )
+
+    print(
+        "\nUnknown query results:"
+    )
+
+    print(
+        unknown_results
+    )
 
 
 # ============================================================
@@ -627,11 +719,12 @@ if __name__ == "__main__":
     )
 
     # --------------------------------------------------------
-    # Part 11 demonstration
+    # Part 12
     # --------------------------------------------------------
 
-    vector_and_cosine_demo(
+    ranked_search_demo(
         processed_documents,
         inverted_index,
         dictionary,
+        categories,
     )
