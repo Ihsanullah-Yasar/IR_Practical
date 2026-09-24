@@ -65,23 +65,29 @@ class Dictionary:
         return self.term_to_id.keys()
 
 
+# ============================================================
+# PART 3 - DICTIONARY
+# ============================================================
+
 def build_dictionary(processed_documents):
     """
     Build a dictionary from all processed documents.
 
     Args:
-        processed_documents: Dictionary in the form:
+        processed_documents:
             {
                 "D1": ["term1", "term2", ...],
                 "D2": ["term2", "term3", ...]
             }
 
     Returns:
-        Dictionary: The constructed term dictionary.
+        Dictionary: The constructed dictionary.
     """
+
     dictionary = Dictionary()
 
     for document_id, tokens in processed_documents.items():
+
         for term in tokens:
             dictionary.add_term(term)
 
@@ -93,11 +99,14 @@ def unique_terms_per_document(processed_documents):
     Calculate the number of unique terms in each document.
 
     Returns:
-        dict: Document ID -> number of unique terms.
+        dict:
+            Document ID -> number of unique terms.
     """
+
     unique_terms = {}
 
     for document_id, tokens in processed_documents.items():
+
         unique_terms[document_id] = len(set(tokens))
 
     return unique_terms
@@ -106,34 +115,51 @@ def unique_terms_per_document(processed_documents):
 def average_unique_terms_per_document(processed_documents):
     """
     Calculate the average number of unique terms per document.
-
-    Returns:
-        float: Average unique terms per document.
     """
+
     if not processed_documents:
         return 0.0
 
-    unique_counts = unique_terms_per_document(processed_documents)
+    unique_counts = unique_terms_per_document(
+        processed_documents
+    )
 
-    total_unique_terms = sum(unique_counts.values())
+    total_unique_terms = sum(
+        unique_counts.values()
+    )
 
-    return total_unique_terms / len(processed_documents)
+    return total_unique_terms / len(
+        processed_documents
+    )
 
 
-def print_dictionary_statistics(dictionary, processed_documents):
+def print_dictionary_statistics(
+    dictionary,
+    processed_documents,
+):
     """
     Print Part 3 dictionary statistics.
     """
-    average_unique_terms = average_unique_terms_per_document(
-        processed_documents
+
+    average_unique_terms = (
+        average_unique_terms_per_document(
+            processed_documents
+        )
     )
 
     print("\n" + "=" * 60)
     print("PART 3 - DICTIONARY")
     print("=" * 60)
 
-    print(f"\nNumber of documents: {len(processed_documents)}")
-    print(f"Vocabulary size: {dictionary.vocabulary_size()}")
+    print(
+        f"\nNumber of documents: "
+        f"{len(processed_documents)}"
+    )
+
+    print(
+        f"Vocabulary size: "
+        f"{dictionary.vocabulary_size()}"
+    )
 
     print(
         f"Average unique terms per document: "
@@ -145,32 +171,59 @@ def dictionary_demo(dictionary):
     """
     Demonstrate basic dictionary operations.
     """
+
     print("\n" + "=" * 60)
     print("DICTIONARY DEMONSTRATION")
     print("=" * 60)
 
     print("\nFirst 20 dictionary terms:")
 
-    for index, term in enumerate(dictionary.terms()):
+    for index, term in enumerate(
+        dictionary.terms()
+    ):
+
         if index >= 20:
             break
 
-        term_id = dictionary.get_term_id(term)
+        term_id = dictionary.get_term_id(
+            term
+        )
 
-        print(f"  {term_id:>4} -> {term}")
+        print(
+            f"  {term_id:>4} -> {term}"
+        )
 
     test_term = "fractal"
 
-    print(f"\nDoes '{test_term}' exist?")
-    print(dictionary.term_exists(test_term))
+    print(
+        f"\nDoes '{test_term}' exist?"
+    )
 
-    print(f"\nTerm ID for '{test_term}':")
-    print(dictionary.get_term_id(test_term))
+    print(
+        dictionary.term_exists(test_term)
+    )
 
-    unknown_term = "thistermdoesnotexist"
+    print(
+        f"\nTerm ID for '{test_term}':"
+    )
 
-    print(f"\nDoes '{unknown_term}' exist?")
-    print(dictionary.term_exists(unknown_term))
+    print(
+        dictionary.get_term_id(test_term)
+    )
+
+    unknown_term = (
+        "thistermdoesnotexist"
+    )
+
+    print(
+        f"\nDoes '{unknown_term}' exist?"
+    )
+
+    print(
+        dictionary.term_exists(
+            unknown_term
+        )
+    )
 
 
 # ============================================================
@@ -192,16 +245,15 @@ def build_inverted_index(processed_documents):
         }
 
     A document appears only once in a posting list,
-    regardless of how many times the term occurs in
-    that document.
+    regardless of how many times the term occurs.
     """
 
     inverted_index = {}
 
-    for document_id, tokens in processed_documents.items():
+    for document_id, tokens in (
+        processed_documents.items()
+    ):
 
-        # Keep track of terms already added for this document.
-        # This prevents duplicate document IDs in a posting list.
         seen_terms = set()
 
         for term in tokens:
@@ -214,7 +266,9 @@ def build_inverted_index(processed_documents):
             if term not in inverted_index:
                 inverted_index[term] = []
 
-            inverted_index[term].append(document_id)
+            inverted_index[term].append(
+                document_id
+            )
 
     return inverted_index
 
@@ -223,51 +277,56 @@ def search_term(term, inverted_index):
     """
     Search the inverted index for a term.
 
-    Args:
-        term: The normalized/stemmed term to search for.
-        inverted_index: The inverted index.
-
     Returns:
-        list: Posting list containing document IDs.
+        list:
+            Posting list containing document IDs.
     """
-    return inverted_index.get(term, [])
+
+    return inverted_index.get(
+        term,
+        []
+    )
 
 
-def document_frequency(term, inverted_index):
+def document_frequency(
+    term,
+    inverted_index,
+):
     """
-    Calculate document frequency (DF) for a term.
+    Calculate document frequency (DF).
 
-    DF is the number of documents containing the term.
-
-    Formula:
-
-        DF(t) = number of documents containing term t
+    DF is the number of documents containing
+    the term.
     """
-    return len(search_term(term, inverted_index))
+
+    return len(
+        search_term(
+            term,
+            inverted_index,
+        )
+    )
 
 
-def document_frequency_table(inverted_index, terms):
+def document_frequency_table(
+    inverted_index,
+    terms,
+):
     """
     Create a document-frequency table.
-
-    Args:
-        inverted_index: The inverted index.
-        terms: List of terms.
-
-    Returns:
-        list of tuples:
-            [
-                ("term1", df1),
-                ("term2", df2),
-                ...
-            ]
     """
+
     table = []
 
     for term in terms:
-        df = document_frequency(term, inverted_index)
 
-        table.append((term, df))
+        df = document_frequency(
+            term,
+            inverted_index,
+        )
+
+        table.append(
+            (term, df)
+        )
 
     return table
 
@@ -279,12 +338,6 @@ def print_inverted_index_statistics(
 ):
     """
     Print inverted-index statistics.
-
-    If a dictionary is supplied, vocabulary size can be
-    compared with the number of indexed terms.
-
-    If processed documents are supplied, the number of
-    documents can also be displayed.
     """
 
     print("\n" + "=" * 60)
@@ -292,36 +345,68 @@ def print_inverted_index_statistics(
     print("=" * 60)
 
     if processed_documents is not None:
-        print(f"\nNumber of documents: {len(processed_documents)}")
 
-    print(f"Number of indexed terms: {len(inverted_index)}")
+        print(
+            f"\nNumber of documents: "
+            f"{len(processed_documents)}"
+        )
+
+    print(
+        f"Number of indexed terms: "
+        f"{len(inverted_index)}"
+    )
 
     total_postings = sum(
         len(document_ids)
-        for document_ids in inverted_index.values()
+        for document_ids in (
+            inverted_index.values()
+        )
     )
 
-    print(f"Total postings: {total_postings}")
+    print(
+        f"Total postings: "
+        f"{total_postings}"
+    )
 
     if dictionary is not None:
-        print(f"Dictionary vocabulary size: {dictionary.vocabulary_size()}")
 
-        if len(inverted_index) == dictionary.vocabulary_size():
-            print("Index/Dictionaries vocabulary check: PASSED")
+        print(
+            f"Dictionary vocabulary size: "
+            f"{dictionary.vocabulary_size()}"
+        )
+
+        if (
+            len(inverted_index)
+            == dictionary.vocabulary_size()
+        ):
+
+            print(
+                "Index/Dictionaries "
+                "vocabulary check: PASSED"
+            )
+
         else:
-            print("Index/Dictionaries vocabulary check: FAILED")
+
+            print(
+                "Index/Dictionaries "
+                "vocabulary check: FAILED"
+            )
 
 
-def inverted_index_demo(inverted_index):
+def inverted_index_demo(
+    inverted_index,
+):
     """
-    Demonstrate inverted-index searching and document frequency.
+    Demonstrate inverted-index searching
+    and document frequency.
     """
 
     print("\n" + "=" * 60)
-    print("INVERTED INDEX DEMONSTRATION")
+    print(
+        "INVERTED INDEX DEMONSTRATION"
+    )
     print("=" * 60)
 
-    # These terms are selected from the processed vocabulary.
     demonstration_terms = [
         "fractal",
         "space",
@@ -335,9 +420,16 @@ def inverted_index_demo(inverted_index):
         "govern",
     ]
 
-    print("\nDOCUMENT FREQUENCY TABLE")
+    print(
+        "\nDOCUMENT FREQUENCY TABLE"
+    )
+
     print("-" * 40)
-    print(f"{'Term':<20}{'DF':>10}")
+
+    print(
+        f"{'Term':<20}{'DF':>10}"
+    )
+
     print("-" * 40)
 
     table = document_frequency_table(
@@ -346,11 +438,13 @@ def inverted_index_demo(inverted_index):
     )
 
     for term, df in table:
-        print(f"{term:<20}{df:>10}")
+
+        print(
+            f"{term:<20}{df:>10}"
+        )
 
     print("-" * 40)
 
-    # Demonstrate a term search.
     test_term = "fractal"
 
     postings = search_term(
@@ -358,17 +452,22 @@ def inverted_index_demo(inverted_index):
         inverted_index,
     )
 
-    print(f"\nDocuments containing '{test_term}':")
+    print(
+        f"\nDocuments containing "
+        f"'{test_term}':"
+    )
 
     print(postings)
 
     print(
-        f"\nDocument frequency of '{test_term}': "
+        f"\nDocument frequency of "
+        f"'{test_term}': "
         f"{len(postings)}"
     )
 
-    # Demonstrate a term that does not exist.
-    unknown_term = "thistermdoesnotexist"
+    unknown_term = (
+        "thistermdoesnotexist"
+    )
 
     unknown_postings = search_term(
         unknown_term,
@@ -376,14 +475,212 @@ def inverted_index_demo(inverted_index):
     )
 
     print(
-        f"\nDocuments containing '{unknown_term}':"
+        f"\nDocuments containing "
+        f"'{unknown_term}':"
     )
 
     print(unknown_postings)
 
 
 # ============================================================
-# PART 4 TEST / DEMONSTRATION
+# PART 5 - POSITIONAL INDEX
+# ============================================================
+
+def build_positional_index(
+    processed_documents,
+):
+    """
+    Build a positional index.
+
+    The positional index maps:
+
+        term -> document -> positions
+
+    Example:
+
+        {
+            "fractal": {
+                "D1": [10, 20, 35],
+                "D8": [7, 18]
+            }
+        }
+
+    Position numbering starts at 1.
+
+    Important design decision:
+    Positions are assigned AFTER preprocessing.
+
+    Therefore, removed stop words do not occupy
+    positions in the positional index.
+    """
+
+    positional_index = {}
+
+    for document_id, tokens in (
+        processed_documents.items()
+    ):
+
+        for position, term in enumerate(
+            tokens,
+            start=1,
+        ):
+
+            if term not in positional_index:
+
+                positional_index[term] = {}
+
+            if (
+                document_id
+                not in positional_index[term]
+            ):
+
+                positional_index[term][
+                    document_id
+                ] = []
+
+            positional_index[term][
+                document_id
+            ].append(position)
+
+    return positional_index
+
+
+def search_positional_term(
+    term,
+    positional_index,
+):
+    """
+    Search for a term in the positional index.
+
+    Returns:
+
+        {
+            "D1": [10, 20],
+            "D8": [7, 18]
+        }
+
+    If the term does not exist, returns {}.
+    """
+
+    return positional_index.get(
+        term,
+        {}
+    )
+
+
+def positional_index_statistics(
+    positional_index,
+    processed_documents,
+):
+    """
+    Calculate basic positional-index statistics.
+    """
+
+    total_positions = 0
+
+    for document_positions in (
+        positional_index.values()
+    ):
+
+        for positions in (
+            document_positions.values()
+        ):
+
+            total_positions += len(
+                positions
+            )
+
+    print("\n" + "=" * 60)
+    print("PART 5 - POSITIONAL INDEX")
+    print("=" * 60)
+
+    print(
+        f"\nNumber of documents: "
+        f"{len(processed_documents)}"
+    )
+
+    print(
+        f"Number of indexed terms: "
+        f"{len(positional_index)}"
+    )
+
+    print(
+        f"Total term positions: "
+        f"{total_positions}"
+    )
+
+
+def positional_index_demo(
+    positional_index,
+):
+    """
+    Demonstrate positional-index operations.
+    """
+
+    print("\n" + "=" * 60)
+    print(
+        "POSITIONAL INDEX DEMONSTRATION"
+    )
+    print("=" * 60)
+
+    demonstration_terms = [
+        "fractal",
+        "space",
+        "orbit",
+    ]
+
+    for term in demonstration_terms:
+
+        postings = search_positional_term(
+            term,
+            positional_index,
+        )
+
+        print(
+            f"\nTerm: '{term}'"
+        )
+
+        print(
+            f"Documents: "
+            f"{len(postings)}"
+        )
+
+        # Display only the first five documents
+        # to keep the demonstration readable.
+        for index, (
+            document_id,
+            positions,
+        ) in enumerate(
+            postings.items()
+        ):
+
+            if index >= 5:
+                break
+
+            print(
+                f"  {document_id}: "
+                f"{positions}"
+            )
+
+    unknown_term = (
+        "thistermdoesnotexist"
+    )
+
+    print(
+        f"\nUnknown term "
+        f"'{unknown_term}':"
+    )
+
+    print(
+        search_positional_term(
+            unknown_term,
+            positional_index,
+        )
+    )
+
+
+# ============================================================
+# PART 5 TEST / DEMONSTRATION
 # ============================================================
 
 if __name__ == "__main__":
@@ -393,12 +690,6 @@ if __name__ == "__main__":
 
     # --------------------------------------------------------
     # Add project root to Python path.
-    #
-    # This allows us to run:
-    #
-    #     python src/indexing.py
-    #
-    # directly from the project root.
     # --------------------------------------------------------
 
     project_root = os.path.dirname(
@@ -408,13 +699,19 @@ if __name__ == "__main__":
     )
 
     if project_root not in sys.path:
-        sys.path.insert(0, project_root)
+
+        sys.path.insert(
+            0,
+            project_root,
+        )
 
     # --------------------------------------------------------
     # Import Part 1 and Part 2 functionality.
     # --------------------------------------------------------
 
-    from src.data_loader import load_documents
+    from src.data_loader import (
+        load_documents,
+    )
 
     from src.preprocessing import (
         preprocess_documents,
@@ -424,20 +721,24 @@ if __name__ == "__main__":
     # Load documents.
     # --------------------------------------------------------
 
-    documents, categories = load_documents(
-        documents_per_category=30
+    documents, categories = (
+        load_documents(
+            documents_per_category=30
+        )
     )
 
     # --------------------------------------------------------
     # Preprocess documents.
     # --------------------------------------------------------
 
-    processed_documents = preprocess_documents(
-        documents
+    processed_documents = (
+        preprocess_documents(
+            documents
+        )
     )
 
     # --------------------------------------------------------
-    # PART 3 - Build dictionary.
+    # PART 3 - Dictionary.
     # --------------------------------------------------------
 
     dictionary = build_dictionary(
@@ -454,16 +755,14 @@ if __name__ == "__main__":
     )
 
     # --------------------------------------------------------
-    # PART 4 - Build inverted index.
+    # PART 4 - Inverted Index.
     # --------------------------------------------------------
 
-    inverted_index = build_inverted_index(
-        processed_documents
+    inverted_index = (
+        build_inverted_index(
+            processed_documents
+        )
     )
-
-    # --------------------------------------------------------
-    # Print inverted-index statistics.
-    # --------------------------------------------------------
 
     print_inverted_index_statistics(
         inverted_index,
@@ -471,10 +770,25 @@ if __name__ == "__main__":
         processed_documents=processed_documents,
     )
 
-    # --------------------------------------------------------
-    # Demonstrate inverted-index operations.
-    # --------------------------------------------------------
-
     inverted_index_demo(
         inverted_index
+    )
+
+    # --------------------------------------------------------
+    # PART 5 - Positional Index.
+    # --------------------------------------------------------
+
+    positional_index = (
+        build_positional_index(
+            processed_documents
+        )
+    )
+
+    positional_index_statistics(
+        positional_index,
+        processed_documents,
+    )
+
+    positional_index_demo(
+        positional_index
     )
