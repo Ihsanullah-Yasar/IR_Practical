@@ -243,13 +243,6 @@ def build_inverted_index(processed_documents):
     The inverted index maps each term to a list
     of document IDs containing that term.
 
-    Example:
-
-        {
-            "fractal": ["D1", "D7", "D15"],
-            "space": ["D4", "D8", "D20"]
-        }
-
     A document appears only once in a posting list,
     regardless of how many times the term occurs.
     """
@@ -502,20 +495,9 @@ def build_positional_index(
 
         term -> document -> positions
 
-    Example:
-
-        {
-            "fractal": {
-                "D1": [10, 20, 35],
-                "D8": [7, 18]
-            }
-        }
-
     Position numbering starts at 1.
 
-    Important design decision:
     Positions are assigned AFTER preprocessing.
-
     Therefore, removed stop words do not occupy
     positions in the positional index.
     """
@@ -650,8 +632,6 @@ def positional_index_demo(
             f"{len(postings)}"
         )
 
-        # Display only the first five documents
-        # to keep the demonstration readable.
         for index, (
             document_id,
             positions,
@@ -698,16 +678,6 @@ def phrase_search(
     The phrase is processed using the same preprocessing
     pipeline used for documents.
 
-    Example:
-
-        phrase_search(
-            "information retrieval",
-            positional_index
-        )
-
-    returns the document IDs where the processed terms
-    occur in consecutive positions.
-
     Stop words removed during preprocessing do not occupy
     positions.
     """
@@ -716,21 +686,17 @@ def phrase_search(
 
     # --------------------------------------------------------
     # Step 1:
-    # Preprocess the phrase using the same pipeline
-    # used for documents.
+    # Preprocess the phrase.
     # --------------------------------------------------------
 
     phrase_terms = preprocess(phrase)
 
-    # If preprocessing removes everything, there is no
-    # meaningful phrase to search.
     if not phrase_terms:
         return []
 
     # --------------------------------------------------------
     # Step 2:
-    # A single-term phrase is equivalent to a normal
-    # positional term search.
+    # Single-term phrase.
     # --------------------------------------------------------
 
     if len(phrase_terms) == 1:
@@ -746,7 +712,7 @@ def phrase_search(
 
     # --------------------------------------------------------
     # Step 3:
-    # Get documents containing the first phrase term.
+    # Find documents containing the first term.
     # --------------------------------------------------------
 
     first_term = phrase_terms[0]
@@ -763,8 +729,7 @@ def phrase_search(
 
     # --------------------------------------------------------
     # Step 4:
-    # Check whether all remaining terms occur at
-    # consecutive positions.
+    # Check consecutive positions.
     # --------------------------------------------------------
 
     matching_documents = []
@@ -778,7 +743,6 @@ def phrase_search(
             current_position = start_position
             phrase_matches = True
 
-            # Check every term after the first term.
             for term in phrase_terms[1:]:
 
                 term_documents = (
@@ -788,8 +752,6 @@ def phrase_search(
                     )
                 )
 
-                # The current document does not contain
-                # the required term.
                 if document_id not in term_documents:
 
                     phrase_matches = False
@@ -805,8 +767,6 @@ def phrase_search(
                     ]
                 )
 
-                # The next term must occur exactly at
-                # the next position.
                 if expected_position not in term_positions:
 
                     phrase_matches = False
@@ -814,15 +774,12 @@ def phrase_search(
 
                 current_position = expected_position
 
-            # All terms occurred consecutively.
             if phrase_matches:
 
                 matching_documents.append(
                     document_id
                 )
 
-                # No need to check other starting
-                # positions for this document.
                 break
 
     return matching_documents
@@ -833,9 +790,6 @@ def phrase_search_demo(
 ):
     """
     Demonstrate phrase searching.
-
-    The example phrases are related to the selected
-    20 Newsgroups categories.
     """
 
     print("\n" + "=" * 60)
@@ -874,10 +828,6 @@ def phrase_search_demo(
 
         print(results[:10])
 
-    # --------------------------------------------------------
-    # Unknown phrase demonstration.
-    # --------------------------------------------------------
-
     unknown_phrase = (
         "thistermdoesnotexist"
     )
@@ -899,6 +849,222 @@ def phrase_search_demo(
 
 
 # ============================================================
+# PART 7 - TERM FREQUENCY
+# ============================================================
+
+def calculate_tf(
+    document,
+    normalized=False,
+):
+    """
+    Calculate term frequency for a document.
+
+    Raw TF:
+        TF(t, d) = count of term t in document d
+
+    Normalized TF:
+        TF(t, d) =
+            count of term t /
+            total number of terms in document d
+
+    Args:
+        document:
+            List of processed terms.
+
+        normalized:
+            If False, return raw term frequencies.
+            If True, return normalized term frequencies.
+
+    Returns:
+        dict:
+            term -> TF value
+    """
+
+    term_counts = {}
+
+    for term in document:
+
+        term_counts[term] = (
+            term_counts.get(term, 0) + 1
+        )
+
+    if not normalized:
+        return term_counts
+
+    total_terms = len(document)
+
+    if total_terms == 0:
+        return {}
+
+    normalized_tf = {}
+
+    for term, count in term_counts.items():
+
+        normalized_tf[term] = (
+            count / total_terms
+        )
+
+    return normalized_tf
+
+
+def print_tf_table(
+    document_id,
+    document,
+    terms,
+):
+    """
+    Print raw and normalized TF values for
+    selected terms in a document.
+    """
+
+    raw_tf = calculate_tf(
+        document,
+        normalized=False,
+    )
+
+    normalized_tf = calculate_tf(
+        document,
+        normalized=True,
+    )
+
+    print(
+        f"\nDocument: {document_id}"
+    )
+
+    print(
+        f"Total processed terms: "
+        f"{len(document)}"
+    )
+
+    print(
+        "\nTERM FREQUENCY TABLE"
+    )
+
+    print("-" * 55)
+
+    print(
+        f"{'Term':<20}"
+        f"{'Raw TF':>12}"
+        f"{'Normalized TF':>20}"
+    )
+
+    print("-" * 55)
+
+    for term in terms:
+
+        raw_value = raw_tf.get(
+            term,
+            0,
+        )
+
+        normalized_value = normalized_tf.get(
+            term,
+            0.0,
+        )
+
+        print(
+            f"{term:<20}"
+            f"{raw_value:>12}"
+            f"{normalized_value:>20.6f}"
+        )
+
+    print("-" * 55)
+
+
+def term_frequency_demo(
+    processed_documents,
+):
+    """
+    Demonstrate raw and normalized term frequency
+    using real processed documents.
+    """
+
+    print("\n" + "=" * 60)
+    print("PART 7 - TERM FREQUENCY")
+    print("=" * 60)
+
+    # --------------------------------------------------------
+    # Demonstration 1:
+    # Use D1 and inspect selected terms.
+    # --------------------------------------------------------
+
+    document_id = "D1"
+
+    document = processed_documents[
+        document_id
+    ]
+
+    demonstration_terms = [
+        "fractal",
+        "comput",
+        "graphic",
+        "space",
+        "orbit",
+    ]
+
+    print(
+        "\nRAW TF AND NORMALIZED TF"
+    )
+
+    print_tf_table(
+        document_id,
+        document,
+        demonstration_terms,
+    )
+
+    # --------------------------------------------------------
+    # Demonstration 2:
+    # Verify that normalized TF values sum to 1.
+    #
+    # Because normalized TF is count / total terms,
+    # the values of all unique terms should sum to 1.
+    # --------------------------------------------------------
+
+    normalized_tf = calculate_tf(
+        document,
+        normalized=True,
+    )
+
+    normalized_tf_sum = sum(
+        normalized_tf.values()
+    )
+
+    print(
+        f"\nSum of normalized TF values "
+        f"for {document_id}: "
+        f"{normalized_tf_sum:.6f}"
+    )
+
+    # --------------------------------------------------------
+    # Demonstration 3:
+    # Empty document.
+    # --------------------------------------------------------
+
+    empty_document = []
+
+    print(
+        "\nEmpty document TF:"
+    )
+
+    print(
+        calculate_tf(
+            empty_document
+        )
+    )
+
+    print(
+        "\nEmpty document normalized TF:"
+    )
+
+    print(
+        calculate_tf(
+            empty_document,
+            normalized=True,
+        )
+    )
+
+
+# ============================================================
 # MAIN PROGRAM
 # ============================================================
 
@@ -909,12 +1075,6 @@ if __name__ == "__main__":
 
     # --------------------------------------------------------
     # Add project root to Python path.
-    #
-    # This allows:
-    #
-    #     python src/indexing.py
-    #
-    # to work correctly.
     # --------------------------------------------------------
 
     project_root = os.path.dirname(
@@ -1024,4 +1184,12 @@ if __name__ == "__main__":
 
     phrase_search_demo(
         positional_index
+    )
+
+    # ========================================================
+    # PART 7 - TERM FREQUENCY
+    # ========================================================
+
+    term_frequency_demo(
+        processed_documents
     )
